@@ -1,123 +1,1092 @@
-const https = require("https");
 
-exports.handler = async function (event) {
-  // CORS – erlaubt Anfragen von überall (auch GitHub Pages)
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  };
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Florá</title>
+<style>
+:root {
+  --g900: #1a3316;
+  --g700: #2d5a27;
+  --g500: #4a7c3f;
+  --g300: #a8d5a0;
+  --g100: #e4f2e1;
+  --g50:  #f2f8f0;
+  --gold: #b07d2a;
+  --white: #ffffff;
+  --ink:  #1a2e1a;
+  --mid:  #4d5e4d;
+  --muted:#8a9e8a;
+  --card: #ffffff;
+  --shadow-sm: 0 1px 4px rgba(26,51,22,.08);
+  --shadow:    0 2px 12px rgba(26,51,22,.10);
+  --r: 14px;
+  --r-sm: 8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#c8dfc4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--ink)}
 
-  // Preflight
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers, body: "" };
-  }
+#app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:var(--g50);position:relative;overflow:hidden}
 
-  if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers, body: "Method Not Allowed" };
-  }
+/* STATUS */
+.sbar{display:flex;justify-content:space-between;align-items:center;padding:12px 22px 2px;font-size:13px;font-weight:600;flex-shrink:0}
 
-  try {
-    // Body ist base64-kodiertes Bild von der App
-    const { image } = JSON.parse(event.body);
-    if (!image) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: "Kein Bild" }) };
+/* TOP BAR */
+.tbar{display:flex;justify-content:space-between;align-items:center;padding:4px 22px 10px;flex-shrink:0}
+.logo{font-family:Georgia,serif;font-size:22px;color:var(--gold);letter-spacing:-0.5px}
+.logo b{color:var(--g700)}
+
+/* SCREENS */
+.screen{display:none;flex-direction:column;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.screen.active{display:flex}
+
+/* NAV */
+.bnav{display:flex;background:var(--white);border-top:1px solid #d8e8d0;padding:6px 0 18px;flex-shrink:0}
+.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);padding:4px 0;transition:color .2s}
+.nbtn.active{color:var(--g500)}
+.nbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nbtn span{font-size:10px;font-weight:500}
+
+/* ═══ START ═══ */
+#screen-start{background:var(--g50)}
+.s-hero{background:linear-gradient(160deg,var(--g100) 0%,var(--g50) 100%);padding:16px 22px 20px}
+.s-user-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.s-user{display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--g700);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0}
+.s-hi{font-size:17px;font-weight:700}
+.s-sub{font-size:13px;color:var(--mid);margin-top:1px}
+.logo-hero{font-family:Georgia,serif;font-size:24px;color:var(--gold)}
+.logo-hero b{color:var(--g700)}
+
+.focus-pill{display:flex;align-items:center;gap:10px;background:var(--white);border-radius:50px;padding:12px 18px;cursor:pointer;box-shadow:var(--shadow-sm);border:1px solid #dce8d0;font-size:14px;color:var(--mid)}
+.focus-pip{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+
+.s-body{padding:16px 22px;display:flex;flex-direction:column;gap:14px}
+
+.walk-btn{width:100%;background:var(--g700);color:#fff;border:none;border-radius:50px;padding:17px;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 4px 18px rgba(45,90,39,.28);transition:background .2s,transform .1s}
+.walk-btn:active{transform:scale(.98)}
+.walk-btn.stop{background:#b03a2e}
+.walk-btn svg{width:16px;height:16px;fill:#fff;stroke:none}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.scard{background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-sm)}
+.scard.blue{background:#eef2ff}
+.scard.amber{background:#fef7ee}
+.scard.violet{background:#f4f0ff}
+.snum{font-size:30px;font-weight:800;line-height:1;color:var(--ink)}
+.snum.c-blue{color:#3a4ab0}
+.snum.c-amber{color:#b06a20}
+.snum.c-violet{color:#6a4ab0}
+.sunit{font-size:13px;font-weight:600}
+.slabel{font-size:12px;color:var(--muted);margin-top:4px}
+.reset-row{text-align:right;font-size:12px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.reset-row:hover{color:var(--g500)}
+
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:6px;background:var(--white);border:1.5px solid #d0e8cc;border-radius:50px;padding:7px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink)}
+.chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.chip-dashed{border-style:dashed;color:var(--muted)}
+
+.weather-card{background:var(--g100);border-radius:var(--r);padding:18px;display:flex;align-items:center;justify-content:space-between}
+.w-temp{font-size:32px;font-weight:800;color:var(--ink)}
+.w-desc{font-size:13px;color:var(--mid);margin-top:3px}
+.w-icon{width:48px;height:48px}
+
+/* ═══ SCAN ═══ */
+#screen-scan{background:#111d11}
+.scan-hdr{background:var(--g900);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.scan-title{font-size:17px;font-weight:700;color:#fff}
+.icon-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff}
+.icon-btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.cam-wrap{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:0}
+#cam-video{width:100%;height:100%;object-fit:cover}
+.cam-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.frame-inner{width:72%;aspect-ratio:1;position:relative}
+.fc{position:absolute;width:26px;height:26px;border-color:#5de872;border-style:solid}
+.fc.tl{top:0;left:0;border-width:3px 0 0 3px;border-radius:5px 0 0 0}
+.fc.tr{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 5px 0 0}
+.fc.bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 5px}
+.fc.br{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 5px 0}
+.sline{position:absolute;width:82%;left:9%;height:2px;background:linear-gradient(90deg,transparent,#5de872,transparent);animation:sl 2.2s ease-in-out infinite}
+@keyframes sl{0%,100%{top:15%}50%{top:82%}}
+.cam-badge{position:absolute;top:14px;right:14px;background:rgba(26,51,22,.8);color:#fff;border-radius:50px;padding:6px 14px;font-size:12px;font-weight:600;backdrop-filter:blur(4px)}
+.cam-hint{position:absolute;bottom:14px;color:rgba(255,255,255,.75);font-size:13px;text-align:center;padding:0 20px}
+
+.analyzing{position:absolute;inset:0;background:rgba(0,0,0,.65);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .3s}
+.analyzing.on{opacity:1}
+.spinner{width:46px;height:46px;border:4px solid rgba(255,255,255,.2);border-top-color:#5de872;border-radius:50%;animation:sp .9s linear infinite}
+.spinner-sm{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.analyzing p{color:#fff;font-size:15px;font-weight:600}
+
+.scan-hint-bar{background:var(--g900);padding:8px 22px 4px;flex-shrink:0}
+.scan-hint-bar p{font-size:12px;color:rgba(255,255,255,.55)}
+.scan-hint-bar p.bright{color:rgba(255,255,255,.85);font-weight:500}
+
+.scan-ctrl{background:var(--g900);padding:14px 22px 10px;display:flex;align-items:center;justify-content:space-around;flex-shrink:0}
+.ctrl-btn{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff}
+.ctrl-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shutter{width:68px;height:68px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+.shutter:active{transform:scale(.9)}
+.shutter-inner{width:54px;height:54px;border-radius:50%;background:#5de872}
+
+/* ═══ RESULT MODAL ═══ */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:flex-end;justify-content:center;max-width:430px;margin:auto;opacity:0;pointer-events:none;transition:opacity .28s}
+.overlay.on{opacity:1;pointer-events:all}
+.sheet{background:#fff;border-radius:22px 22px 0 0;padding:20px 22px 32px;width:100%;max-height:80vh;overflow-y:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.6,1)}
+.overlay.on .sheet{transform:translateY(0)}
+.handle{width:40px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 18px}
+.res-img{width:100%;height:210px;object-fit:cover;border-radius:var(--r);margin-bottom:14px;background:var(--g100)}
+.res-img-placeholder{width:100%;height:210px;border-radius:var(--r);margin-bottom:14px;background:var(--g100);display:flex;align-items:center;justify-content:center}
+.res-img-placeholder svg{width:60px;height:60px;stroke:var(--g300);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:50px;padding:4px 12px;font-size:12px;font-weight:700;margin-bottom:10px}
+.badge.plant{background:var(--g100);color:var(--g700)}
+.badge.animal{background:#fff3e0;color:#b06a20}
+.res-name{font-size:24px;font-weight:800;margin-bottom:3px}
+.res-latin{font-size:14px;color:var(--muted);font-style:italic;margin-bottom:12px}
+.res-desc{font-size:14px;line-height:1.6;color:var(--mid);margin-bottom:16px}
+.pts-banner{background:linear-gradient(135deg,var(--g900),var(--g500));color:#fff;border-radius:var(--r-sm);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pts-banner .pts{font-size:28px;font-weight:900}
+.pts-banner .pts-lbl{font-size:12px;opacity:.8}
+.pts-banner svg{width:32px;height:32px;stroke:#fff;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.btn-p{width:100%;background:var(--g700);color:#fff;border:none;border-radius:50px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:8px}
+.btn-s{width:100%;background:none;color:var(--mid);border:none;font-size:14px;cursor:pointer;padding:8px}
+
+/* ═══ LEXIKON ═══ */
+#screen-lexikon{background:var(--g50)}
+.lex-hdr{padding:20px 22px 14px;background:var(--g100)}
+.page-title{font-size:30px;font-weight:900;font-family:Georgia,serif;color:var(--ink);margin-bottom:14px}
+.searchbox{display:flex;align-items:center;gap:10px;background:#fff;border-radius:50px;padding:12px 18px;box-shadow:var(--shadow-sm)}
+.searchbox svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.searchbox input{border:none;outline:none;font-size:15px;flex:1;background:transparent;color:var(--ink)}
+
+.lex-body{padding:16px 22px;display:flex;flex-direction:column;gap:10px}
+.lex-card{background:#fff;border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-sm);cursor:pointer;transition:transform .12s}
+.lex-card:active{transform:scale(.98)}
+.lex-thumb{width:54px;height:54px;border-radius:10px;object-fit:cover;flex-shrink:0}
+.lex-thumb-ph{width:54px;height:54px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.lex-thumb-ph svg{width:26px;height:26px;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.lex-info{flex:1;min-width:0}
+.lex-info h4{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lex-info .lat{font-size:12px;color:var(--muted);font-style:italic}
+.lex-info .dat{font-size:11px;color:var(--muted);margin-top:2px}
+.type-pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:50px;white-space:nowrap}
+.tp-plant{background:var(--g100);color:var(--g700)}
+.tp-animal{background:#fff3e0;color:#b06a20}
+.lex-empty{text-align:center;padding:60px 20px}
+.lex-empty svg{width:52px;height:52px;stroke:var(--g300);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;margin:0 auto 14px;display:block}
+.lex-empty h3{font-size:18px;font-weight:700;color:var(--mid);margin-bottom:6px}
+.lex-empty p{font-size:14px;color:var(--muted)}
+
+/* ═══ BELOHNUNG ═══ */
+#screen-belohnung{background:var(--g50)}
+.bel-hdr{padding:20px 22px 14px;background:var(--g100)}
+.pts-hero{background:var(--g900);border-radius:var(--r);padding:22px;text-align:center;color:#fff;margin-top:0}
+.pts-hero .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-bottom:6px}
+.pts-hero .big{font-size:56px;font-weight:900;line-height:1}
+.pts-hero .sub{font-size:13px;opacity:.75;margin-top:6px}
+.bel-body{padding:16px 22px;display:flex;flex-direction:column;gap:18px}
+.earn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.earn-card{background:#fff;border-radius:var(--r-sm);padding:14px 10px;text-align:center;box-shadow:var(--shadow-sm)}
+.earn-card svg{width:28px;height:28px;margin:0 auto 8px;display:block;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.earn-lbl{font-size:12px;color:var(--mid)}
+.earn-pts{font-size:15px;font-weight:700;color:var(--g700)}
+.vouchers{display:flex;flex-direction:column;gap:10px}
+.v-row{background:#fff;border-radius:var(--r-sm);padding:16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow-sm)}
+.v-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.v-icon svg{width:24px;height:24px;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.v-info{flex:1}
+.v-info h4{font-size:15px;font-weight:700}
+.v-info p{font-size:12px;color:var(--muted)}
+.v-btn{background:var(--g700);color:#fff;border:none;border-radius:50px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.v-btn:disabled{background:#ccc;cursor:not-allowed}
+.redeemed-item{background:#fff;border-radius:var(--r-sm);padding:12px 16px;font-size:14px;color:var(--g700);font-weight:600;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-sm)}
+.redeemed-item svg{width:18px;height:18px;stroke:var(--g500);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ═══ FOCUS MODAL ═══ */
+.focus-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;max-width:430px;margin:auto;opacity:0;pointer-events:none;transition:opacity .28s}
+.focus-overlay.on{opacity:1;pointer-events:all}
+.focus-sheet{background:#fff;border-radius:22px 22px 0 0;padding:22px 22px 36px;width:100%;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.6,1)}
+.focus-overlay.on .focus-sheet{transform:translateY(0)}
+.focus-sheet h2{font-size:22px;font-weight:800;margin-bottom:6px}
+.focus-sheet>p{font-size:14px;color:var(--mid);line-height:1.55;margin-bottom:20px}
+.dur-pills{display:flex;gap:10px;margin-bottom:12px}
+.dpill{flex:1;padding:13px;border:2px solid #dde8dd;border-radius:var(--r-sm);background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--mid);text-align:center;transition:all .18s}
+.dpill.on{background:var(--g700);color:#fff;border-color:var(--g700)}
+.dur-custom{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.dur-custom input{flex:1;padding:12px 16px;border:2px solid #dde8dd;border-radius:var(--r-sm);font-size:18px;font-weight:700;text-align:center;outline:none;color:var(--ink);background:var(--g50)}
+.dur-custom span{font-size:13px;color:var(--mid)}
+.fi-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.fi-row{background:var(--g50);border-radius:var(--r-sm);padding:14px;display:flex;align-items:center;gap:12px}
+.fi-row svg{width:22px;height:22px;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none;color:var(--mid);flex-shrink:0}
+.fi-text h4{font-size:14px;font-weight:700}
+.fi-text p{font-size:12px;color:var(--muted)}
+.fi-tag{font-size:12px;font-weight:600;margin-left:auto;white-space:nowrap}
+.fi-tag.amber{color:#b07d2a}
+.fi-tag.green{color:var(--g500)}
+
+/* ═══ WALK OVERLAY ═══ */
+.walk-overlay{position:fixed;inset:0;z-index:400;background:var(--g900);display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:430px;margin:auto;opacity:0;pointer-events:none;transition:opacity .3s}
+.walk-overlay.on{opacity:1;pointer-events:all}
+.walk-icon-wrap{width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.walk-icon-wrap svg{width:44px;height:44px;stroke:#5de872;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.walk-overlay h2{font-size:20px;font-weight:700;color:#fff;margin-bottom:0}
+.walk-time{font-size:64px;font-weight:900;color:#5de872;font-variant-numeric:tabular-nums;margin:14px 0;letter-spacing:-2px}
+.walk-row{display:flex;gap:36px;margin-bottom:28px}
+.ws{text-align:center;color:#fff}
+.ws-n{font-size:28px;font-weight:800}
+.ws-l{font-size:12px;opacity:.65;margin-top:2px}
+.stop-btn{background:#fff;color:var(--g900);border:none;border-radius:50px;padding:16px 44px;font-size:17px;font-weight:800;cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;top:78px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--g900);color:#fff;padding:12px 22px;border-radius:50px;font-size:14px;font-weight:600;z-index:999;opacity:0;transition:all .28s;white-space:nowrap;max-width:88%;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* LEX DETAIL OVERLAY */
+.ld-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;max-width:430px;margin:auto;opacity:0;pointer-events:none;transition:opacity .28s}
+.ld-overlay.on{opacity:1;pointer-events:all}
+.ld-sheet{background:#fff;border-radius:22px 22px 0 0;padding:20px 22px 32px;width:100%;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.6,1)}
+.ld-overlay.on .ld-sheet{transform:translateY(0)}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- STATUS BAR -->
+<div class="sbar">
+  <span id="clock">--:--</span>
+  <span style="font-family:Georgia,serif;font-size:14px;color:var(--gold)"><b style="color:var(--g700)">Flor</b>á</span>
+  <span style="font-size:13px">●●●</span>
+</div>
+<!-- TOP BAR -->
+<div class="tbar">
+  <div></div>
+  <div class="logo"><b>Flor</b>á</div>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 0 18"/><path d="M12 2C8 6 7 10 7 14s1 6 5 8"/><path d="M3 9h18M3 15h18"/></svg>
+</div>
+
+<!-- ══ START ══ -->
+<div id="screen-start" class="screen active">
+  <div class="s-hero">
+    <div class="s-user-row">
+      <div class="s-user">
+        <div class="avatar">B</div>
+        <div>
+          <div class="s-hi">Hallo, Benjamin!</div>
+          <div class="s-sub">Bereit für die Natur?</div>
+        </div>
+      </div>
+      <div class="logo-hero"><b>Flor</b>á</div>
+    </div>
+    <div class="focus-pill" onclick="openFocus()">
+      <div class="focus-pip"></div>
+      Fokus-Modus starten
+    </div>
+  </div>
+
+  <div class="s-body">
+    <button class="walk-btn" id="walkBtn" onclick="toggleWalk()">
+      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+      <span id="walkBtnTxt">Spaziergang starten</span>
+    </button>
+
+    <div class="stats-grid">
+      <div class="scard">
+        <div class="snum"><span id="km">0.0</span><span class="sunit"> km</span></div>
+        <div class="slabel">Heute gelaufen</div>
+      </div>
+      <div class="scard blue">
+        <div class="snum c-blue" id="steps">0</div>
+        <div class="slabel">Schritte heute</div>
+      </div>
+      <div class="scard amber">
+        <div class="snum c-amber"><span id="funde">0</span><span class="sunit" style="font-size:13px"> Funde</span></div>
+        <div class="slabel">Gesammelt</div>
+      </div>
+      <div class="scard violet">
+        <div class="snum c-violet" id="pts">0</div>
+        <div class="slabel">Punkte</div>
+      </div>
+    </div>
+
+    <div class="reset-row" onclick="resetDay()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Tageszähler zurücksetzen
+    </div>
+
+    <div>
+      <div class="sec-label">Mein Lexikon</div>
+      <div class="chips" id="homeChips">
+        <div class="chip chip-dashed" onclick="go('scan')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Jetzt scannen
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-label">Wetter</div>
+      <div class="weather-card">
+        <div>
+          <div class="w-temp" id="wTemp">–°</div>
+          <div class="w-desc" id="wDesc">Standort wird geladen…</div>
+        </div>
+        <svg class="w-icon" id="wSvg" viewBox="0 0 64 64" fill="none" stroke="var(--g500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="32" cy="28" r="10" fill="var(--g300)" stroke="none"/>
+          <line x1="32" y1="8" x2="32" y2="4"/><line x1="32" y1="52" x2="32" y2="48"/>
+          <line x1="12" y1="28" x2="8" y2="28"/><line x1="56" y1="28" x2="52" y2="28"/>
+          <line x1="17" y1="13" x2="14" y2="10"/><line x1="50" y1="46" x2="47" y2="43"/>
+          <line x1="47" y1="13" x2="50" y2="10"/><line x1="14" y1="46" x2="17" y2="43"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCAN ══ -->
+<div id="screen-scan" class="screen">
+  <div class="scan-hdr">
+    <button class="icon-btn" onclick="go('start')">
+      <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <span class="scan-title">Pflanze scannen</span>
+    <button class="icon-btn" onclick="flipCam()">
+      <svg viewBox="0 0 24 24"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+    </button>
+  </div>
+
+  <div class="cam-wrap">
+    <video id="cam-video" autoplay playsinline muted></video>
+    <canvas id="cam-canvas" style="display:none"></canvas>
+    <div class="cam-frame">
+      <div class="frame-inner">
+        <div class="fc tl"></div><div class="fc tr"></div>
+        <div class="fc bl"></div><div class="fc br"></div>
+        <div class="sline"></div>
+      </div>
+    </div>
+    <div class="cam-badge" id="camBadge">Kamera aktiv</div>
+    <div class="cam-hint">Pflanze in den Rahmen halten, dann fotografieren</div>
+    <div class="analyzing" id="analyzing">
+      <div class="spinner"></div>
+      <p>Wird analysiert…</p>
+    </div>
+  </div>
+
+  <div class="scan-hint-bar">
+    <p class="bright">Bereit</p>
+    <p>Nur Pflanzen · Erkannte Funde werden ins Lexikon gespeichert</p>
+  </div>
+  <div class="scan-ctrl">
+    <button class="ctrl-btn" onclick="openGallery()">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+    </button>
+    <button class="shutter" onclick="shoot()"><div class="shutter-inner"></div></button>
+    <button class="ctrl-btn" id="flashBtn" onclick="toggleFlash()">
+      <svg viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10"/></svg>
+    </button>
+  </div>
+  <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="galleryPick(event)">
+</div>
+
+<!-- ══ LEXIKON ══ -->
+<div id="screen-lexikon" class="screen">
+  <div class="lex-hdr">
+    <div class="page-title">Mein Lexikon</div>
+    <div class="searchbox">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Pflanze suchen…" oninput="filterLex(this.value)" id="lexQ">
+    </div>
+  </div>
+  <div class="lex-body" id="lexList"></div>
+</div>
+
+<!-- ══ BELOHNUNG ══ -->
+<div id="screen-belohnung" class="screen">
+  <div class="bel-hdr">
+    <div class="page-title">Belohnungen</div>
+    <div class="pts-hero">
+      <div class="lbl">Deine Punkte</div>
+      <div class="big" id="heroPts">0</div>
+      <div class="sub" id="heroSub">Noch 100 Punkte bis 5€</div>
+    </div>
+  </div>
+  <div class="bel-body">
+    <div>
+      <div class="sec-label">Punkte verdienen</div>
+      <div class="earn-grid">
+        <div class="earn-card">
+          <svg viewBox="0 0 24 24" stroke="var(--g500)"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10"/><path d="M12 6v6l4 2"/></svg>
+          <div class="earn-lbl">Pflanzen</div>
+          <div class="earn-pts">+200</div>
+        </div>
+        <div class="earn-card">
+          <svg viewBox="0 0 24 24" stroke="#b06a20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <div class="earn-lbl">Tiere</div>
+          <div class="earn-pts">+100</div>
+        </div>
+        <div class="earn-card">
+          <svg viewBox="0 0 24 24" stroke="var(--g700)"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <div class="earn-lbl">Spaziergang</div>
+          <div class="earn-pts">+50/km</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-label">Gutscheine</div>
+      <div class="vouchers" id="vList"></div>
+    </div>
+    <div id="redSec" style="display:none">
+      <div class="sec-label">Eingelöst</div>
+      <div id="redList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div id="noRedSec">
+      <div class="sec-label">Eingelöst</div>
+      <p style="font-size:14px;color:var(--muted);padding:6px 0">Noch keine eingelöst.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <button class="nbtn active" id="nav-start" onclick="go('start')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    <span>Start</span>
+  </button>
+  <button class="nbtn" id="nav-scan" onclick="go('scan')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M3 9V6a1 1 0 0 1 1-1h3M3 15v3a1 1 0 0 0 1 1h3M21 9V6a1 1 0 0 0-1-1h-3M21 15v3a1 1 0 0 1-1 1h-3"/></svg>
+    <span>Scan</span>
+  </button>
+  <button class="nbtn" id="nav-lexikon" onclick="go('lexikon')">
+    <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>Lexikon</span>
+  </button>
+  <button class="nbtn" id="nav-belohnung" onclick="go('belohnung')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+    <span>Belohnung</span>
+  </button>
+</nav>
+</div>
+
+<!-- RESULT MODAL -->
+<div class="overlay" id="resModal">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div id="resImgWrap"></div>
+    <div class="badge" id="resBadge">Pflanze</div>
+    <div class="res-name" id="resName">–</div>
+    <div class="res-latin" id="resLatin">–</div>
+    <div class="res-desc" id="resDesc">–</div>
+    <div class="pts-banner">
+      <div>
+        <div class="pts-lbl">Punkte erhalten</div>
+        <div class="pts" id="resPts">+200</div>
+      </div>
+      <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    </div>
+    <button class="btn-p" onclick="saveScan()">Ins Lexikon speichern</button>
+    <button class="btn-s" onclick="closeRes()">Schließen</button>
+  </div>
+</div>
+
+<!-- LEX DETAIL MODAL -->
+<div class="ld-overlay" id="ldModal">
+  <div class="ld-sheet">
+    <div class="handle"></div>
+    <div id="ldContent"></div>
+    <button class="btn-s" onclick="closeLd()" style="margin-top:12px">Schließen</button>
+  </div>
+</div>
+
+<!-- FOCUS MODAL -->
+<div class="focus-overlay" id="focusModal">
+  <div class="focus-sheet">
+    <div class="handle"></div>
+    <h2>Fokus-Modus starten</h2>
+    <p>Benachrichtigungen werden stumm geschaltet. Die App läuft normal weiter – du kannst alles wie gewohnt nutzen.</p>
+    <div class="sec-label" style="margin-bottom:10px">Dauer wählen</div>
+    <div class="dur-pills">
+      <button class="dpill" onclick="setDur(30,this)">30 min</button>
+      <button class="dpill on" onclick="setDur(45,this)">45 min</button>
+      <button class="dpill" onclick="setDur(60,this)">60 min</button>
+    </div>
+    <div class="dur-custom">
+      <input type="number" id="durIn" value="45" min="5" max="240" oninput="customDur(this.value)">
+      <span>Minuten (5–240)</span>
+    </div>
+    <div class="sec-label" style="margin-bottom:8px">Was passiert</div>
+    <div class="fi-rows">
+      <div class="fi-row">
+        <svg viewBox="0 0 24 24"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        <div class="fi-text"><h4>Benachrichtigungen stumm</h4><p>Browser-Popups werden blockiert</p></div>
+        <div class="fi-tag amber">Wird gefragt</div>
+      </div>
+      <div class="fi-row">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <div class="fi-text"><h4>Bildschirm wach halten</h4><p>Kein Auto-Lock während der Wanderung</p></div>
+        <div class="fi-tag green">Verfügbar</div>
+      </div>
+    </div>
+    <button class="btn-p" onclick="startFocus()">▶ Fokus-Modus starten</button>
+  </div>
+</div>
+
+<!-- WALK OVERLAY -->
+<div class="walk-overlay" id="walkOv">
+  <div class="walk-icon-wrap">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="4" r="2"/><path d="M8 22l1-7-2-3 3-5"/><path d="M16 22l-1-7 2-3-3-5"/><path d="M6 10l2 1 2.5-1.5"/><path d="M18 10l-2 1-2.5-1.5"/></svg>
+  </div>
+  <h2>Spaziergang läuft</h2>
+  <div id="trackBadge" style="font-size:12px;font-weight:600;padding:5px 14px;border-radius:50px;background:rgba(176,125,42,0.85);color:#fff;margin-bottom:4px">Schrittsensor aktiv</div>
+  <div class="walk-time" id="wTime">00:00</div>
+  <div class="walk-row">
+    <div class="ws"><div class="ws-n" id="wKm">0.0</div><div class="ws-l">km</div></div>
+    <div class="ws"><div class="ws-n" id="wSteps">0</div><div class="ws-l">Schritte</div></div>
+  </div>
+  <button class="stop-btn" onclick="stopWalk()">Spaziergang beenden</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════ STATE ═══════════════
+const S = {
+  pts:0, steps:0, km:0, lexikon:[], redeemed:[],
+  walking:false, walkStart:null, walkTmr:null, stepIv:null, geoW:null, lastPos:null,
+  wakeLock:null, focusDur:45,
+  scan:null, imgDataUrl:null,
+  stream:null, facing:'environment', flash:false,
+};
+
+const VOUCHERS = [
+  {id:'v5',  label:'5€ Gutschein',   pts:100,   icon:'gift'},
+  {id:'v50', label:'50€ Gutschein',  pts:1000,  icon:'ticket'},
+  {id:'v100',label:'100€ Gutschein', pts:10000, icon:'trophy'},
+];
+
+// ═══════════════ CLOCK ═══════════════
+function tick(){
+  const n=new Date();
+  document.getElementById('clock').textContent=
+    n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
+}
+tick(); setInterval(tick,15000);
+
+// ═══════════════ NAV ═══════════════
+function go(tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+  if(tab==='scan') startCam();
+  else stopCam();
+  if(tab==='belohnung') renderBel();
+  if(tab==='lexikon'){renderLex();document.getElementById('lexQ').value='';}
+  if(tab==='start') renderChips();
+}
+
+// ═══════════════ WALK ═══════════════
+function toggleWalk(){ S.walking? stopWalk(): startWalk(); }
+
+// ── Pedometer (Beschleunigungssensor) ──
+const STEP = {
+  buf: [], bufSize: 15,
+  history: [],   // letzte Magnitude-Werte fuer Peak-Detection
+  histSize: 5,
+  cooldown: 0,
+  minGap: 320,
+};
+
+function accelStep(e){
+  if(!S.walking) return;
+  const now = Date.now();
+
+  // acceleration (ohne Schwerkraft) bevorzugen – genauer
+  const ax = (e.acceleration && e.acceleration.x != null) ? e.acceleration.x : (e.accelerationIncludingGravity?.x || 0);
+  const ay = (e.acceleration && e.acceleration.y != null) ? e.acceleration.y : (e.accelerationIncludingGravity?.y || 0);
+  const az = (e.acceleration && e.acceleration.z != null) ? e.acceleration.z : (e.accelerationIncludingGravity?.z || 0);
+
+  const raw = Math.sqrt(ax*ax + ay*ay + az*az);
+
+  // Gleitender Durchschnitt (Smooth)
+  STEP.buf.push(raw);
+  if(STEP.buf.length > STEP.bufSize) STEP.buf.shift();
+  const smooth = STEP.buf.reduce((a,b)=>a+b,0) / STEP.buf.length;
+
+  // History fuer lokale Peak-Detection
+  STEP.history.push(smooth);
+  if(STEP.history.length > STEP.histSize) STEP.history.shift();
+
+  if(STEP.history.length < 3) return;
+
+  const len = STEP.history.length;
+  const mid = STEP.history[len-2]; // vorletzter Wert
+  const prev = STEP.history[len-3];
+  const curr = STEP.history[len-1];
+
+  // Lokales Maximum: mittlerer Wert groesser als Nachbarn
+  const isPeak = mid > prev && mid > curr && mid > 0.5;
+
+  if(isPeak && now > STEP.cooldown){
+    STEP.cooldown = now + STEP.minGap;
+    if(S.gpsWeak){
+      S.steps++;
+      S.km = Math.round(S.steps * 0.00075 * 100) / 100;
+      updateDisplay();
     }
+  }
+}
 
-    // Base64 → Buffer
-    const imgBuffer = Buffer.from(image, "base64");
+function startPedometer(){
+  S.gpsWeak=true; // Erstmal als schwach annehmen, GPS korrigiert
+  if(typeof DeviceMotionEvent !== 'undefined'){
+    // iOS 13+ braucht Erlaubnis
+    if(typeof DeviceMotionEvent.requestPermission === 'function'){
+      DeviceMotionEvent.requestPermission().then(r=>{
+        if(r==='granted'){
+          window.addEventListener('devicemotion', accelStep);
+          S.pedoActive=true;
+        }
+      }).catch(()=>{});
+    } else {
+      window.addEventListener('devicemotion', accelStep);
+      S.pedoActive=true;
+    }
+  }
+}
 
-    // Multipart-Body für Pl@ntNet manuell bauen
-    const boundary = "----FlораBoundary" + Date.now();
-    const CRLF = "\r\n";
+function stopPedometer(){
+  if(S.pedoActive){
+    window.removeEventListener('devicemotion', accelStep);
+    S.pedoActive=false;
+  }
+}
 
-    // Pflanzenteil (Blatt ist am zuverlässigsten)
-    const organ = "auto"; // auto = Pl@ntNet erkennt selbst
+function startWalk(){
+  S.walking=true; S.walkStart=Date.now();
+  S.km=0; S.steps=0; S.lastPos=null; S.gpsWeak=true; S.pedoActive=false;
+  STEP.buf=[]; STEP.history=[]; STEP.cooldown=0;
 
-    let bodyParts = "";
-    bodyParts += `--${boundary}${CRLF}`;
-    bodyParts += `Content-Disposition: form-data; name="organs"${CRLF}${CRLF}`;
-    bodyParts += `${organ}${CRLF}`;
+  const btn=document.getElementById('walkBtn');
+  btn.classList.add('stop');
+  btn.querySelector('svg').innerHTML='<rect x="6" y="6" width="12" height="12" rx="2"/>';
+  document.getElementById('walkBtnTxt').textContent='Spaziergang läuft…';
+  document.getElementById('walkOv').classList.add('on');
+  updateTrackingBadge();
 
-    const beforeImage = Buffer.from(
-      `--${boundary}${CRLF}` +
-      `Content-Disposition: form-data; name="images"; filename="plant.jpg"${CRLF}` +
-      `Content-Type: image/jpeg${CRLF}${CRLF}`
-    );
-    const afterImage = Buffer.from(`${CRLF}--${boundary}--${CRLF}`);
-    const textPart = Buffer.from(bodyParts);
+  if('wakeLock'in navigator) navigator.wakeLock.request('screen').then(w=>{S.wakeLock=w;}).catch(()=>{});
 
-    const bodyBuffer = Buffer.concat([textPart, beforeImage, imgBuffer, afterImage]);
+  // Timer für Uhr
+  S.walkTmr=setInterval(wDisplay,1000);
 
-    // Pl@ntNet API aufrufen
-    const API_KEY = "2b10C4NysEFOH2SvuMTOyrWZHe";
-    const options = {
-      hostname: "my-api.plantnet.org",
-      path: `/v2/identify/all?api-key=${API_KEY}&lang=de&include-related-images=false`,
-      method: "POST",
-      headers: {
-        "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Content-Length": bodyBuffer.length,
-      },
-    };
+  // Pedometer starten (Fallback)
+  startPedometer();
 
-    const result = await new Promise((resolve, reject) => {
-      const req = https.request(options, (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => resolve({ status: res.statusCode, body: data }));
-      });
-      req.on("error", reject);
-      req.write(bodyBuffer);
-      req.end();
+  // GPS starten
+  if(navigator.geolocation){
+    S.geoW=navigator.geolocation.watchPosition(pos=>{
+      if(!S.walking) return;
+      const acc=pos.coords.accuracy;
+
+      // GPS-Qualität beurteilen: unter 20m = gut, darüber = schwach
+      const gpsGood = acc<=20;
+      if(S.gpsWeak !== !gpsGood){
+        S.gpsWeak=!gpsGood;
+        updateTrackingBadge();
+      }
+
+      if(!gpsGood) return; // Schwaches GPS ignorieren, Pedo übernimmt
+
+      if(S.lastPos){
+        const dist=haversine(
+          S.lastPos.coords.latitude, S.lastPos.coords.longitude,
+          pos.coords.latitude, pos.coords.longitude
+        );
+        if(dist>0.003){ // >3m Bewegung
+          S.km=Math.round((S.km+dist)*100)/100;
+          // GPS überschreibt Schrittzählung (genauer)
+          const newSteps=Math.round(dist*1000/0.75);
+          S.steps+=newSteps;
+          updateDisplay();
+        }
+      }
+      S.lastPos=pos;
+    },
+    (err)=>{
+      S.gpsWeak=true;
+      updateTrackingBadge();
+      if(err.code===1) toast('Standort verweigert – nur Schrittsensor aktiv');
+    },
+    {enableHighAccuracy:true, maximumAge:2000, timeout:15000});
+  } else {
+    S.gpsWeak=true;
+    updateTrackingBadge();
+  }
+}
+
+function updateTrackingBadge(){
+  // Badge im Walk-Overlay anpassen
+  const el=document.getElementById('trackBadge');
+  if(!el) return;
+  if(S.gpsWeak){
+    el.textContent='Schrittsensor aktiv';
+    el.style.background='rgba(176,125,42,0.85)';
+  } else {
+    el.textContent='GPS aktiv';
+    el.style.background='rgba(26,51,22,0.85)';
+  }
+}
+
+function stopWalk(){
+  S.walking=false;
+  clearInterval(S.walkTmr);
+  stopPedometer();
+  if(S.geoW) navigator.geolocation.clearWatch(S.geoW);
+  if(S.wakeLock){S.wakeLock.release();S.wakeLock=null;}
+  const btn=document.getElementById('walkBtn');
+  btn.classList.remove('stop');
+  btn.querySelector('svg').innerHTML='<polygon points="5,3 19,12 5,21"/>';
+  document.getElementById('walkBtnTxt').textContent='Spaziergang starten';
+  document.getElementById('walkOv').classList.remove('on');
+  toast('Spaziergang beendet · '+S.steps+' Schritte · '+S.km.toFixed(2)+' km');
+  updateDisplay();
+}
+
+function wDisplay(){
+  const e=Math.floor((Date.now()-S.walkStart)/1000);
+  document.getElementById('wTime').textContent=
+    Math.floor(e/60).toString().padStart(2,'0')+':'+(e%60).toString().padStart(2,'0');
+  document.getElementById('wKm').textContent=(S.km).toFixed(2);
+  document.getElementById('wSteps').textContent=S.steps;
+}
+
+function haversine(la1,lo1,la2,lo2){
+  const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function updateDisplay(){
+  document.getElementById('km').textContent=S.km.toFixed(1);
+  document.getElementById('steps').textContent=S.steps;
+  document.getElementById('funde').textContent=S.lexikon.length;
+  document.getElementById('pts').textContent=S.pts;
+  document.getElementById('heroPts').textContent=S.pts;
+  heroSub();
+}
+
+function resetDay(){S.steps=0;S.km=0;updateDisplay();toast('Tageszähler zurückgesetzt');}
+
+// ═══════════════ WEATHER ═══════════════
+const WCODE={
+  0:'Klarer Himmel',1:'Überwiegend klar',2:'Teilweise bewölkt',3:'Bedeckt',
+  45:'Nebel',51:'Leichter Nieselregen',61:'Leichter Regen',63:'Mäßiger Regen',
+  65:'Starker Regen',71:'Leichter Schnee',80:'Regenschauer',95:'Gewitter'
+};
+function loadWx(){
+  if(!navigator.geolocation){setWx('–°','Standort nicht verfügbar');return;}
+  navigator.geolocation.getCurrentPosition(async p=>{
+    try{
+      const {latitude:la,longitude:lo}=p.coords;
+      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current_weather=true`);
+      const d=await r.json();
+      const cw=d.current_weather;
+      const geo=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=json`);
+      const gd=await geo.json();
+      const city=gd.address?.city||gd.address?.town||gd.address?.village||'';
+      setWx(Math.round(cw.temperature)+'°', (WCODE[cw.weathercode]||'Aktuelles Wetter')+(city?' · '+city:''));
+    }catch{setWx('–°','Wetterdaten nicht verfügbar');}
+  },()=>setWx('–°','Standort nicht verfügbar'));
+}
+function setWx(t,d){
+  document.getElementById('wTemp').textContent=t;
+  document.getElementById('wDesc').textContent=d;
+}
+loadWx();
+
+// ═══════════════ CAMERA ═══════════════
+async function startCam(){
+  try{
+    S.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.facing,width:{ideal:1280},height:{ideal:720}}});
+    document.getElementById('cam-video').srcObject=S.stream;
+    document.getElementById('camBadge').textContent='Kamera aktiv';
+  }catch{
+    document.getElementById('camBadge').textContent='Kamera nicht verfügbar';
+    toast('Kamerazugriff verweigert');
+  }
+}
+function stopCam(){if(S.stream){S.stream.getTracks().forEach(t=>t.stop());S.stream=null;}}
+function flipCam(){S.facing=S.facing==='environment'?'user':'environment';stopCam();startCam();}
+function toggleFlash(){
+  S.flash=!S.flash;
+  document.getElementById('flashBtn').style.color=S.flash?'#5de872':'';
+  if(S.stream){
+    const t=S.stream.getVideoTracks()[0];
+    if(t?.getCapabilities?.()?.torch) t.applyConstraints({advanced:[{torch:S.flash}]}).catch(()=>{});
+  }
+}
+function openGallery(){document.getElementById('galleryInput').click();}
+function galleryPick(e){
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{S.imgDataUrl=ev.target.result; analyzeImg(f);};
+  r.readAsDataURL(f);
+  e.target.value='';
+}
+function shoot(){
+  const v=document.getElementById('cam-video'), c=document.getElementById('cam-canvas');
+  if(!S.stream||!v.srcObject){toast('Kamera noch nicht bereit');return;}
+  c.width=v.videoWidth||640; c.height=v.videoHeight||480;
+  c.getContext('2d').drawImage(v,0,0);
+  S.imgDataUrl=c.toDataURL('image/jpeg',0.85);
+  c.toBlob(b=>{if(b)analyzeImg(b); else toast('Foto fehlgeschlagen');}, 'image/jpeg',0.9);
+}
+
+// ═══════════════ PL@NTNET VIA NETLIFY PROXY ═══════════════
+// Proxy-URL – nach Netlify-Deploy anpassen!
+const PROXY_URL = 'https://effulgent-horse-1485f3.netlify.app/.netlify/functions/identify';
+
+async function analyzeImg(blob){
+  document.getElementById('analyzing').classList.add('on');
+  try{
+    // Bild als base64 senden
+    const b64 = await new Promise((res,rej)=>{
+      const fr = new FileReader();
+      fr.onload = ()=> res(fr.result.split(',')[1]);
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
     });
 
-    console.log('PlantNet status:', result.status);
-    console.log('PlantNet body:', result.body.substring(0, 300));
+    const resp = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: b64 }),
+    });
 
-    if (result.status !== 200) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ found: false, debug: "PlantNet " + result.status + ": " + result.body }),
-      };
+    const data = await resp.json();
+    document.getElementById('analyzing').classList.remove('on');
+
+    if(!data.found){
+      const msg = data.debug ? 'Debug: '+data.debug : 'Keine Pflanze erkannt – anderes Foto versuchen';
+      toast(msg);
+      return;
     }
 
-    const plantData = JSON.parse(result.body);
-    const best = plantData.results?.[0];
+    // Beschreibung zusammensetzen
+    const desc = `${data.latin} gehört zur Familie der ${data.family||'Pflanzen'}. `+
+      `Erkennungssicherheit: ${data.score}%. Identifiziert mit Pl@ntNet.`;
 
-    if (!best) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ found: false }),
-      };
-    }
-
-    const score = Math.round(best.score * 100);
-    const species = best.species;
-    const germanName =
-      species.commonNames?.find((n) => /[äöüÄÖÜß]/.test(n)) ||
-      species.commonNames?.[0] ||
-      species.scientificNameWithoutAuthor;
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        found: true,
-        name: germanName,
-        latin: species.scientificNameWithoutAuthor,
-        family: species.family?.scientificNameWithoutAuthor || "",
-        score: score,
-        type: "plant",
-      }),
+    const result = {
+      name: data.name,
+      latin: data.latin,
+      type: 'plant',
+      description: desc,
+      found: true,
+      score: data.score,
     };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: err.message }),
-    };
+
+    S.scan = result;
+    showResult(result);
+
+  }catch(err){
+    console.error('Proxy error:',err);
+    document.getElementById('analyzing').classList.remove('on');
+    toast('Fehler: '+err.message);
   }
+}
+
+// ═══════════════ RESULT ═══════════════
+function showResult(r){
+  const pts=r.type==='animal'?100:200;
+  document.getElementById('resBadge').textContent=(r.type==='animal'?'Tier':'Pflanze')+(r.score?' · '+r.score+'% Sicherheit':'');
+  document.getElementById('resBadge').className='badge '+(r.type==='animal'?'animal':'plant');
+  document.getElementById('resName').textContent=r.name||'Unbekannt';
+  document.getElementById('resLatin').textContent=r.latin||'';
+  document.getElementById('resDesc').textContent=r.description||'';
+  document.getElementById('resPts').textContent='+'+pts;
+  const w=document.getElementById('resImgWrap');
+  if(S.imgDataUrl){
+    w.innerHTML=`<img src="${S.imgDataUrl}" class="res-img" alt="">`;
+  } else {
+    w.innerHTML=`<div class="res-img-placeholder"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></div>`;
+  }
+  document.getElementById('resModal').classList.add('on');
+}
+function closeRes(){document.getElementById('resModal').classList.remove('on');S.scan=null;S.imgDataUrl=null;}
+
+function saveScan(){
+  if(!S.scan)return;
+  const exists=S.lexikon.find(e=>e.name===S.scan.name);
+  if(exists){toast(S.scan.name+' bereits im Lexikon');closeRes();return;}
+  const item={...S.scan,id:Date.now(),date:new Date().toLocaleDateString('de-DE'),imgDataUrl:S.imgDataUrl,pts:S.scan.type==='animal'?100:200};
+  S.lexikon.push(item);
+  S.pts+=item.pts;
+  updateDisplay();renderLex();renderChips();renderBel();
+  closeRes();
+  toast(item.name+' gespeichert · +'+item.pts+' Punkte');
+}
+
+// ═══════════════ LEXIKON ═══════════════
+function renderLex(q=''){
+  const list=document.getElementById('lexList');
+  const items=S.lexikon.filter(i=>!q||i.name.toLowerCase().includes(q.toLowerCase())||(i.latin||'').toLowerCase().includes(q.toLowerCase()));
+  if(!items.length){
+    list.innerHTML=`<div class="lex-empty">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <h3>${q?'Kein Treffer':'Noch keine Funde'}</h3>
+      <p>${q?'Anderen Suchbegriff versuchen.':'Scanne Pflanzen und Tiere, um sie hier zu sammeln.'}</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML=items.map(it=>`
+    <div class="lex-card" onclick="openLd(${it.id})">
+      ${it.imgDataUrl
+        ?`<img class="lex-thumb" src="${it.imgDataUrl}" alt="">`
+        :`<div class="lex-thumb-ph" style="background:${it.type==='animal'?'#fff3e0':'var(--g100)'}">
+            <svg viewBox="0 0 24 24" stroke="${it.type==='animal'?'#b06a20':'var(--g500)'}" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              ${it.type==='animal'?'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>':'<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v8M8 12h8"/>'}
+            </svg>
+          </div>`}
+      <div class="lex-info">
+        <h4>${it.name}</h4>
+        <div class="lat">${it.latin||''}</div>
+        <div class="dat">${it.date}</div>
+      </div>
+      <div class="type-pill ${it.type==='animal'?'tp-animal':'tp-plant'}">${it.type==='animal'?'Tier':'Pflanze'}</div>
+    </div>`).join('');
+}
+function filterLex(v){renderLex(v);}
+
+function openLd(id){
+  const it=S.lexikon.find(i=>i.id===id); if(!it)return;
+  const img=it.imgDataUrl
+    ?`<img src="${it.imgDataUrl}" style="width:100%;height:200px;object-fit:cover;border-radius:var(--r);margin-bottom:14px">`
+    :`<div class="res-img-placeholder"><svg viewBox="0 0 24 24" stroke="var(--g300)" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>`;
+  document.getElementById('ldContent').innerHTML=`
+    ${img}
+    <div class="badge ${it.type==='animal'?'animal':'plant'}">${it.type==='animal'?'Tier':'Pflanze'}</div>
+    <div class="res-name">${it.name}</div>
+    <div class="res-latin">${it.latin||''}</div>
+    <div class="res-desc">${it.description||''}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">Gefunden am ${it.date} · +${it.pts} Punkte</div>`;
+  document.getElementById('ldModal').classList.add('on');
+}
+function closeLd(){document.getElementById('ldModal').classList.remove('on');}
+
+function renderChips(){
+  const chips=document.getElementById('homeChips');
+  const last=S.lexikon.slice(-5).reverse();
+  if(!last.length){
+    chips.innerHTML=`<div class="chip chip-dashed" onclick="go('scan')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Jetzt scannen
+    </div>`;
+    return;
+  }
+  chips.innerHTML=last.map(it=>`
+    <div class="chip" onclick="go('lexikon')">
+      <div class="chip-dot" style="background:${it.type==='animal'?'#b06a20':'var(--g500)'}"></div>
+      ${it.name}
+    </div>`).join('');
+}
+
+// ═══════════════ BELOHNUNG ═══════════════
+function heroSub(){
+  const next=VOUCHERS.find(v=>S.pts<v.pts&&!S.redeemed.includes(v.id));
+  document.getElementById('heroSub').textContent=next
+    ?'Noch '+(next.pts-S.pts).toLocaleString('de-DE')+' Punkte bis '+next.label
+    :'Alle Gutscheine verfügbar!';
+}
+
+const vIcons={
+  gift:`<svg viewBox="0 0 24 24" stroke="var(--g700)" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,12 20,22 4,22 4,12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
+  ticket:`<svg viewBox="0 0 24 24" stroke="#b07d2a" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>`,
+  trophy:`<svg viewBox="0 0 24 24" stroke="#8a6a2a" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,11 17,11 17,2 7,2 7,11 9,11"/><path d="M7 2a5 5 0 0 0 10 0"/><line x1="12" y1="11" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`,
 };
+const vBg={gift:'var(--g100)',ticket:'#fff7e6',trophy:'#f5f0e0'};
+
+function renderBel(){
+  document.getElementById('heroPts').textContent=S.pts;
+  heroSub();
+  document.getElementById('vList').innerHTML=VOUCHERS.map(v=>{
+    const can=S.pts>=v.pts&&!S.redeemed.includes(v.id);
+    const done=S.redeemed.includes(v.id);
+    return `<div class="v-row" style="${done?'opacity:.5':''}">
+      <div class="v-icon" style="background:${vBg[v.icon]}">${vIcons[v.icon]}</div>
+      <div class="v-info"><h4>${v.label}</h4><p>Ab ${v.pts.toLocaleString('de-DE')} Punkten</p></div>
+      <button class="v-btn" onclick="redeem('${v.id}')" ${!can||done?'disabled':''}>
+        ${done?'Eingelöst':'Einlösen'}
+      </button>
+    </div>`;
+  }).join('');
+  if(S.redeemed.length){
+    document.getElementById('redSec').style.display='block';
+    document.getElementById('noRedSec').style.display='none';
+    document.getElementById('redList').innerHTML=S.redeemed.map(id=>{
+      const v=VOUCHERS.find(x=>x.id===id);
+      return `<div class="redeemed-item">
+        <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>
+        ${v?v.label:id}
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('redSec').style.display='none';
+    document.getElementById('noRedSec').style.display='block';
+  }
+}
+
+function redeem(id){
+  const v=VOUCHERS.find(x=>x.id===id);
+  if(!v||S.pts<v.pts||S.redeemed.includes(id))return;
+  S.redeemed.push(id);
+  toast(v.label+' eingelöst!');
+  renderBel();
+}
+
+// ═══════════════ FOCUS ═══════════════
+function openFocus(){document.getElementById('focusModal').classList.add('on');}
+function closeFocus(){document.getElementById('focusModal').classList.remove('on');}
+function setDur(min,el){
+  S.focusDur=min;
+  document.querySelectorAll('.dpill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('durIn').value=min;
+}
+function customDur(v){
+  S.focusDur=Math.max(5,Math.min(240,parseInt(v)||5));
+  document.querySelectorAll('.dpill').forEach(p=>p.classList.remove('on'));
+}
+async function startFocus(){
+  closeFocus();
+  if('wakeLock'in navigator) navigator.wakeLock.request('screen').then(w=>{S.wakeLock=w;}).catch(()=>{});
+  toast('Fokus-Modus aktiv für '+S.focusDur+' Minuten');
+  setTimeout(()=>toast('Fokus-Modus beendet'),S.focusDur*60000);
+}
+
+// ═══════════════ TOAST ═══════════════
+let _tt;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('on'),3200);
+}
+
+// ═══════════════ BACKDROP CLOSES ═══════════════
+['resModal','focusModal','ldModal'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(e.target.id===id) document.getElementById(id).classList.remove('on');
+  });
+});
+
+// ═══════════════ INIT ═══════════════
+renderBel(); renderChips(); updateDisplay();
+</script>
+</body>
+</html>
